@@ -48,7 +48,7 @@ jobs:
         uses: actions/checkout@v6.0.2
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v5.4.1
+        uses: astral-sh/setup-uv@v8.1.0
         with:
           # Decision 4 — cache uv's package cache, keyed on uv.lock content hash.
           # Action sets the cache directory, key (hashes uv.lock + includes OS),
