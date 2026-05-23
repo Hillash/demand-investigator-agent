@@ -45,7 +45,7 @@ jobs:
       # rewrite them to commit SHAs on the first update PR after the
       # .github/dependabot.yml config lands.
       - name: Checkout
-        uses: actions/checkout@v4.2.2
+        uses: actions/checkout@v6.0.2
 
       - name: Set up uv
         uses: astral-sh/setup-uv@v5.4.1
