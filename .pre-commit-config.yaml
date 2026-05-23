@@ -8,15 +8,23 @@ repos:
       - id: check-toml
       - id: check-added-large-files
 
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.15.14
-    hooks:
-      - id: ruff-format
-      - id: ruff-check
-        args: [--fix]
-
+  # Decision 7 — Solution A. Run ruff and mypy from the uv-managed venv so
+  # pre-commit and CI resolve the *same* version via uv.lock. No second source
+  # of truth for tool versions in this file.
   - repo: local
     hooks:
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+
       - id: mypy
         name: mypy
         entry: uv run mypy
