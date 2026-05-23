@@ -1,0 +1,81 @@
+name: CI
+
+# Decision 2 — triggers
+# push on main:        belt-and-suspenders for direct pushes / merge commits
+# pull_request:        gates every PR (required by branch protection)
+# workflow_dispatch:   manual "Run workflow" button in the Actions UI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# Decision 2 — concurrency
+# Cancel older in-progress runs on the same branch when a new push arrives.
+# group: keys per-workflow-per-branch so PR runs don't cancel main runs.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+# Decision 6b — least-privilege token.
+# Declaring any permissions: key sets every other scope to none.
+# This workflow only reads source code and reports pass/fail.
+permissions:
+  contents: read
+
+# Decision 3 — Windows gotcha. Force bash on Windows runners (GitHub installs
+# Git Bash there) so `run:` step semantics don't diverge between OSes.
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  ci:
+    name: ci (${{ matrix.os }})
+    strategy:
+      # Don't cancel the Linux job just because Windows failed (or vice versa).
+      # We want to see both verdicts on every PR.
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      # TODO(supply-chain): convert these tag pins to SHA pins. Dependabot will
+      # rewrite them to commit SHAs on the first update PR after the
+      # .github/dependabot.yml config lands.
+      - name: Checkout
+        uses: actions/checkout@v4.2.2
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v5.4.1
+        with:
+          # Decision 4 — cache uv's package cache, keyed on uv.lock content hash.
+          # Action sets the cache directory, key (hashes uv.lock + includes OS),
+          # and restore/save behavior for us.
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+
+      - name: Install Python and project
+        # `uv sync` installs the exact lockfile versions into .venv.
+        # --frozen errors out if uv.lock is out of date relative to pyproject.toml,
+        # which is what we want in CI: drift should fail, not silently re-resolve.
+        run: uv sync --frozen
+
+      # Decision 5 — single job, sequential steps, with `if: always()` so a
+      # failure in one step doesn't hide the verdict of later steps. You learn
+      # every failure in one PR push instead of fixing them one-at-a-time.
+      - name: ruff format
+        run: uv run ruff format --check .
+
+      - name: ruff check
+        if: always()
+        run: uv run ruff check .
+
+      - name: mypy
+        if: always()
+        run: uv run mypy
+
+      - name: pytest
+        if: always()
+        run: uv run pytest

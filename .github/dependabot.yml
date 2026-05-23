@@ -1,0 +1,15 @@
+# Decision 6a — turn action updates from silent supply-chain drift into
+# reviewable PRs. Dependabot reads the version comments in workflow files,
+# checks upstream for new releases, and opens a PR per update.
+#
+# Once you SHA-pin actions in ci.yml (the TODO in that file), Dependabot's
+# PRs will rewrite the SHAs and update the trailing `# v1.2.3` comment.
+
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    commit-message:
+      prefix: "ci"
